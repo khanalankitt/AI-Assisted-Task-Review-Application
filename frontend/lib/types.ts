@@ -8,6 +8,7 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
   createdAt: string;
+  analysis: AIAnalysisResult | null;
 }
 
 export interface AIAnalysisResult {

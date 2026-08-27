@@ -1,6 +1,7 @@
 import { callGemini } from "./gemini.client";
 import { AIAnalysisResult } from "./ai.types";
 import { Task } from "../tasks/task.types";
+import { taskRepository } from "../tasks/task.repository";
 import { ApiError } from "../../utils/ApiError";
 
 function buildPrompt(task: Task): string {
@@ -33,6 +34,10 @@ function isValidResult(value: unknown): value is AIAnalysisResult {
 
 export const aiService = {
   async analyseTask(task: Task): Promise<AIAnalysisResult> {
+    if (task.analysis) {
+      return task.analysis;
+    }
+
     const prompt = buildPrompt(task);
 
     let rawText: string;
@@ -59,6 +64,10 @@ export const aiService = {
         "AI service returned an unexpected response shape",
       );
     }
+
+    // Persist the analysis on the task so subsequent requests reuse it and
+    // don't call Gemini again.
+    taskRepository.saveAnalysis(task.id, parsed);
 
     return parsed;
   },

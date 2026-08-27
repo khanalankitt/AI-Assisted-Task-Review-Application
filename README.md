@@ -170,6 +170,10 @@ The request uses Gemini's structured JSON response configuration to specify the 
 
 The AI integration is designed to fail safely. API failures, timeouts, invalid keys, empty responses, and unexpected response structures are converted into consistent API errors instead of crashing the server or passing invalid data to the frontend.
 
+### Persisted analysis
+
+The first time a task is analysed, the resulting `category`, `priority`, `summary`, and `recommendedAction` are stored on the task in the database. Subsequent calls to `POST /tasks/:id/analyse` return the saved analysis immediately instead of calling Gemini again, avoiding repeated (and costly) AI requests. The saved analysis is also included in `GET /tasks/:id` and `GET /tasks` responses.
+
 ## Frontend
 
 The UI includes:
@@ -208,7 +212,6 @@ I reviewed and tested the generated code rather than accepting it as-is. In part
 
 With more time, I would add:
 
-* Persisted AI analysis to avoid repeated Gemini calls
 * Zod-based request validation
 * Pagination for larger task lists
 * Authentication and authorization

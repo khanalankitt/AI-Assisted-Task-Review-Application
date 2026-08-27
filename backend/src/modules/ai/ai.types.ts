@@ -1,6 +1,3 @@
-export interface AIAnalysisResult {
-  category: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  summary: string;
-  recommendedAction: string;
-}
+import { AIAnalysis } from '../tasks/task.types';
+
+export type AIAnalysisResult = AIAnalysis;

@@ -15,6 +15,7 @@ describe("Task API", () => {
   let taskId: string;
 
   beforeEach(() => {
+    (callGemini as jest.Mock).mockClear();
     taskId = uuidv4();
     taskRepository.create({
       id: taskId,
@@ -98,6 +99,32 @@ describe("Task API", () => {
       // The server should still be responsive after the failure.
       const healthRes = await request(app).get("/health");
       expect(healthRes.status).toBe(200);
+    });
+
+    it("persists the analysis and reuses it without calling AI again", async () => {
+      (callGemini as jest.Mock).mockResolvedValueOnce(
+        JSON.stringify({
+          category: "LOGIN_ISSUE",
+          priority: "MEDIUM",
+          summary: "Customer cannot log in after a password reset.",
+          recommendedAction: "Reset the customer's session tokens.",
+        }),
+      );
+
+      const firstRes = await request(app).post(`/tasks/${taskId}/analyse`);
+      expect(firstRes.status).toBe(200);
+      expect(callGemini).toHaveBeenCalledTimes(1);
+
+      // A second call should reuse the stored analysis, not hit Gemini again.
+      const secondRes = await request(app).post(`/tasks/${taskId}/analyse`);
+      expect(secondRes.status).toBe(200);
+      expect(secondRes.body.category).toBe("LOGIN_ISSUE");
+      expect(callGemini).toHaveBeenCalledTimes(1);
+
+      // The persisted analysis is also returned with the task object.
+      const getRes = await request(app).get(`/tasks/${taskId}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.analysis.category).toBe("LOGIN_ISSUE");
     });
   });
 });

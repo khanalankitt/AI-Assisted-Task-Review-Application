@@ -10,6 +10,13 @@ export enum TaskPriority {
   HIGH = 'HIGH',
 }
 
+export interface AIAnalysis {
+  category: string;
+  priority: TaskPriority;
+  summary: string;
+  recommendedAction: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -17,6 +24,7 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
   createdAt: string;
+  analysis?: AIAnalysis | null;
 }
 
 export interface CreateTaskInput {

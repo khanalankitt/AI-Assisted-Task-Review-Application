@@ -50,6 +50,7 @@ export default function TaskDetailPage() {
     try {
       const data = await api.getTask(id);
       setTask(data);
+      setAnalysis(data.analysis);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load task");
     } finally {
@@ -210,7 +211,7 @@ export default function TaskDetailPage() {
                 AI analysis
               </h2>
               <p className="text-xs text-slate-400">
-                Get a suggested category, priority and next action.
+                Save a suggested category, priority and next action.
               </p>
             </div>
           </div>
@@ -269,7 +270,8 @@ export default function TaskDetailPage() {
               <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-400">
                 Click <span className="font-semibold text-[var(--app-accent-strong)]">Analyze with AI</span> to
                 automatically suggest a category, priority, and next action for
-                this task.
+                this task. The result is saved so it appears instantly next
+                time.
               </p>
             </div>
           )}
