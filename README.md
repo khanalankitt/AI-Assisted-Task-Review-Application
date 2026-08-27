@@ -9,7 +9,7 @@ It allows users to view incoming tasks, update their status, and use **Google Ge
 * **Backend:** Node.js, Express, TypeScript
 * **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
 * **Database:** SQLite with `better-sqlite3`
-* **AI:** Google Gemini REST API via `axios`
+* **AI:** Google Gemini using the official `@google/genai` SDK
 * **Testing:** Jest + Supertest
 
 ## Architecture
@@ -36,7 +36,7 @@ backend/src/
 
 Instead of having global `controllers/`, `services/`, `repositories/`, and `routes/` folders, related files are grouped by **feature/module**.
 
-This keeps everything related to a feature together and makes the application easier to navigate and scale. Adding a new feature means creating a new module rather than spreading its files across multiple global layer folders.
+This keeps feature-specific code together and makes the application easier to navigate, maintain, and scale. Adding a new feature means adding a new module rather than spreading its files across multiple global layer folders.
 
 Each module still follows:
 
@@ -146,6 +146,8 @@ Invalid status values are rejected with `400` before the database is modified.
 
 ## AI Analysis
 
+The application uses Google's official **`@google/genai` SDK** to communicate with Gemini rather than making manual REST/fetch requests.
+
 Gemini generates:
 
 ```text
@@ -155,7 +157,9 @@ summary
 recommendedAction
 ```
 
-The AI integration is designed to fail safely. API failures, timeouts, invalid keys, and malformed Gemini responses are converted into consistent API errors instead of crashing the server or passing invalid data to the frontend.
+The request uses Gemini's structured JSON response configuration to specify the expected response shape. The backend additionally parses and validates the returned data before passing it to the frontend.
+
+The AI integration is designed to fail safely. API failures, timeouts, invalid keys, empty responses, and unexpected response structures are converted into consistent API errors instead of crashing the server or passing invalid data to the frontend.
 
 ## Frontend
 
@@ -185,13 +189,11 @@ Tests cover:
 * Missing task (`404`)
 * AI failure handling
 
-
-
 ## AI-Assisted Development
 
 I used **OpenCode** to help scaffold the backend/frontend and generate some boilerplate.
 
-I reviewed and tested the generated code rather than accepting it as-is. In particular, I tightened Gemini response validation and improved error handling so malformed AI responses and API failures are handled safely.
+I reviewed and tested the generated code rather than accepting it as-is. In particular, I improved Gemini response validation and error handling, and switched the AI integration to Google's official `@google/genai` SDK for a cleaner and more maintainable integration.
 
 ## Future Improvements
 
