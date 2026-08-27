@@ -29,12 +29,3 @@ db.exec(`
     analysis TEXT
   )
 `);
-
-// Lightweight migration: add the analysis column to databases created before
-// AI analysis was persisted.
-const columns = db.prepare('PRAGMA table_info(tasks)').all() as {
-  name: string;
-}[];
-if (!columns.some((col) => col.name === 'analysis')) {
-  db.exec('ALTER TABLE tasks ADD COLUMN analysis TEXT');
-}
