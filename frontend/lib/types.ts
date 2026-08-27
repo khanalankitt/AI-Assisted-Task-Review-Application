@@ -17,3 +17,11 @@ export interface AIAnalysisResult {
   summary: string;
   recommendedAction: string;
 }
+
+export interface PaginatedResult<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}

@@ -181,7 +181,7 @@ export default function TaskDetailPage() {
                     key={opt.value}
                     disabled={updatingStatus}
                     onClick={() => handleStatusChange(opt.value)}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3.5 cursor-pointer py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
                       selected
                         ? "border-[var(--app-accent)] bg-[var(--app-accent-soft)] text-[var(--app-accent-strong)]"
                         : "border-[var(--app-border)] bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
@@ -218,7 +218,7 @@ export default function TaskDetailPage() {
           <button
             onClick={handleAnalyse}
             disabled={analysing}
-            className="group relative inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--app-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[var(--app-accent)]/30 transition-all hover:bg-[var(--app-accent-strong)] hover:shadow-lg hover:shadow-[var(--app-accent)]/40 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--app-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[var(--app-accent)]/30 transition-all hover:bg-[var(--app-accent-strong)] hover:shadow-lg hover:shadow-[var(--app-accent)]/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Sparkles
               className={`h-4 w-4 ${analysing ? "animate-pulse" : ""}`}

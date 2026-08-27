@@ -153,6 +153,30 @@ COMPLETED
 
 Invalid status values are rejected with `400` before the database is modified.
 
+### Pagination
+
+`GET /tasks` is paginated. It accepts optional query params:
+
+| Param    | Description                                        | Default |
+| -------- | -------------------------------------------------- | ------- |
+| `status` | Filter results by status (`NEW`, `IN_PROGRESS`, `COMPLETED`) | all |
+| `page`   | 1-based page number                                | `1`     |
+| `limit`  | Results per page (max `1000`)                      | `10`    |
+
+It returns a paginated envelope:
+
+```json
+{
+  "data": [],
+  "page": 1,
+  "limit": 10,
+  "total": 0,
+  "totalPages": 0
+}
+```
+
+The task table fetches `10` tasks at a time and provides forward/backward arrows to navigate pages.
+
 ## AI Analysis
 
 The application uses Google's official **`@google/genai` SDK** to communicate with Gemini rather than making manual REST/fetch requests.
@@ -201,6 +225,7 @@ Tests cover:
 * Invalid status rejection
 * Missing task (`404`)
 * AI failure handling
+* Pagination
 
 ## AI-Assisted Development
 
@@ -213,6 +238,5 @@ I reviewed and tested the generated code rather than accepting it as-is. In part
 With more time, I would add:
 
 * Zod-based request validation
-* Pagination for larger task lists
 * Authentication and authorization
 * Playwright E2E tests

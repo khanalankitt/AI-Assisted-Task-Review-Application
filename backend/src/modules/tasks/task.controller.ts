@@ -4,9 +4,13 @@ import { taskService } from './task.service';
 export const taskController = {
   getTasks(req: Request, res: Response, next: NextFunction) {
     try {
-      const { status } = req.query;
-      const tasks = taskService.getTasks(status as string | undefined);
-      res.json(tasks);
+      const { status, page, limit } = req.query;
+      const result = taskService.getTasks({
+        status: status as string | undefined,
+        page,
+        limit,
+      });
+      res.json(result);
     } catch (err) {
       next(err);
     }

@@ -27,6 +27,14 @@ export interface Task {
   analysis?: AIAnalysis | null;
 }
 
+export interface PaginatedResult<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface CreateTaskInput {
   title: string;
   description: string;

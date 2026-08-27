@@ -1,15 +1,52 @@
 import { v4 as uuidv4 } from 'uuid';
 import { taskRepository } from './task.repository';
-import { CreateTaskInput, Task, TaskStatus } from './task.types';
+import {
+  CreateTaskInput,
+  PaginatedResult,
+  Task,
+  TaskStatus,
+} from './task.types';
 import { isValidPriority, isValidStatus } from './task.validation';
 import { ApiError } from '../../utils/ApiError';
 
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 1000;
+
+function parsePositiveInt(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
 export const taskService = {
-  getTasks(status?: string): Task[] {
+  getTasks(options: {
+    status?: string;
+    page?: unknown;
+    limit?: unknown;
+  }): PaginatedResult<Task> {
+    const { status } = options;
     if (status && !isValidStatus(status)) {
       throw new ApiError(400, `Invalid status filter: ${status}`);
     }
-    return taskRepository.findAll(status as TaskStatus | undefined);
+
+    let limit = parsePositiveInt(options.limit, DEFAULT_LIMIT);
+    if (limit > MAX_LIMIT) limit = MAX_LIMIT;
+    const page = parsePositiveInt(options.page, 1);
+    const offset = (page - 1) * limit;
+
+    const { rows, total } = taskRepository.findAll({
+      status: status as TaskStatus | undefined,
+      limit,
+      offset,
+    });
+
+    return {
+      data: rows,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    };
   },
 
   getTaskById(id: string): Task {

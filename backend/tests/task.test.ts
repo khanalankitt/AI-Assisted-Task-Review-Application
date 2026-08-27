@@ -59,12 +59,60 @@ describe("Task API", () => {
     it("filters tasks by status", async () => {
       const res = await request(app).get("/tasks").query({ status: "NEW" });
       expect(res.status).toBe(200);
-      expect(res.body.every((t: any) => t.status === "NEW")).toBe(true);
+      expect(res.body.data.every((t: any) => t.status === "NEW")).toBe(true);
+      expect(res.body.total).toBe(res.body.data.length);
     });
 
     it("rejects an invalid status filter", async () => {
       const res = await request(app).get("/tasks").query({ status: "BOGUS" });
       expect(res.status).toBe(400);
+    });
+
+    it("paginates results 10 at a time and exposes total", async () => {
+      // Create 24 more NEW tasks so we have enough to exercise multiple pages.
+      for (let i = 0; i < 24; i++) {
+        taskRepository.create({
+          id: uuidv4(),
+          title: `Bulk task ${i}`,
+          description: "Description",
+          priority: TaskPriority.LOW,
+          status: TaskStatus.NEW,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      const page1 = await request(app)
+        .get("/tasks")
+        .query({ status: "NEW", page: 1, limit: 10 });
+      expect(page1.status).toBe(200);
+      expect(page1.body.data.length).toBe(10);
+      expect(page1.body.page).toBe(1);
+      expect(page1.body.limit).toBe(10);
+      expect(page1.body.total).toBeGreaterThanOrEqual(25);
+      expect(page1.body.totalPages).toBe(
+        Math.ceil(page1.body.total / page1.body.limit),
+      );
+
+      const page2 = await request(app)
+        .get("/tasks")
+        .query({ status: "NEW", page: 2, limit: 10 });
+      expect(page2.status).toBe(200);
+      expect(page2.body.data.length).toBe(10);
+      expect(page2.body.page).toBe(2);
+
+      // Pages must not contain the same task.
+      const ids1 = new Set(page1.body.data.map((t: any) => t.id));
+      const ids2 = page2.body.data.map((t: any) => t.id);
+      expect(ids2.some((id: string) => ids1.has(id))).toBe(false);
+
+      // The last page holds the remainder.
+      const lastPage = page1.body.totalPages;
+      const last = await request(app)
+        .get("/tasks")
+        .query({ status: "NEW", page: lastPage, limit: 10 });
+      expect(last.body.page).toBe(lastPage);
+      expect(last.body.data.length).toBeGreaterThan(0);
+      expect(last.body.data.length).toBeLessThanOrEqual(10);
     });
   });
 

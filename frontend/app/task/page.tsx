@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Task, TaskStatus } from "@/lib/types";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { Skeleton } from "@/components/Skeleton";
-import { AlertCircle, ArrowRight, Inbox } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+} from "lucide-react";
 
 const FILTERS: { label: string; value: TaskStatus | "ALL" }[] = [
   { label: "All", value: "ALL" },
@@ -14,6 +20,8 @@ const FILTERS: { label: string; value: TaskStatus | "ALL" }[] = [
   { label: "In progress", value: "IN_PROGRESS" },
   { label: "Completed", value: "COMPLETED" },
 ];
+
+const PAGE_SIZE = 10;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -25,46 +33,85 @@ function formatDate(iso: string) {
 
 export default function TaskListPage() {
   const [filter, setFilter] = useState<TaskStatus | "ALL">("ALL");
+  const [page, setPage] = useState(1);
   const [tasks, setTasks] = useState<Task[] | null>(null);
-  const [allTasks, setAllTasks] = useState<Task[] | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  async function load(currentFilter: TaskStatus | "ALL") {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.getTasks(currentFilter);
-      setTasks(data);
-      const all = await api.getTasks();
-      setAllTasks(all);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loadCounts = useCallback(async () => {
+    const all = await api.getTasks({ limit: 1 });
+    const next: Record<string, number> = {
+      ALL: all.total,
+    };
+    await Promise.all(
+      (["NEW", "IN_PROGRESS", "COMPLETED"] as TaskStatus[]).map(
+        async (status) => {
+          const res = await api.getTasks({ status, limit: 1 });
+          next[status] = res.total;
+        },
+      ),
+    );
+    setCounts(next);
+  }, []);
+
+  const load = useCallback(
+    async (currentFilter: TaskStatus | "ALL", targetPage: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [data] = await Promise.all([
+          api.getTasks({
+            status: currentFilter,
+            page: targetPage,
+            limit: PAGE_SIZE,
+          }),
+          loadCounts(),
+        ]);
+        setTasks(data.data);
+        setPage(data.page);
+        setTotal(data.total);
+        setTotalPages(Math.max(1, data.totalPages));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load tasks");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadCounts],
+  );
 
   useEffect(() => {
-    load(filter);
+    load(filter, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  async function goToPage(targetPage: number) {
+    if (targetPage < 1 || targetPage > totalPages) return;
+    await load(filter, targetPage);
+  }
 
   async function handleStatusChange(id: string, status: TaskStatus) {
     setUpdatingId(id);
     try {
       const updated = await api.updateStatus(id, status);
-      setTasks((prev) => prev?.map((t) => (t.id === id ? updated : t)) ?? null);
-      setAllTasks(
+      setTasks(
         (prev) => prev?.map((t) => (t.id === id ? updated : t)) ?? null,
       );
+      loadCounts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setUpdatingId(null);
     }
   }
+
+  const start =
+    total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const end = Math.min(page * PAGE_SIZE, total);
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-10">
@@ -82,10 +129,7 @@ export default function TaskListPage() {
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => {
           const active = filter === f.value;
-          const count =
-            f.value === "ALL"
-              ? allTasks?.length
-              : allTasks?.filter((t) => t.status === f.value).length;
+          const count = counts[f.value] ?? 0;
           return (
             <button
               key={f.value}
@@ -105,7 +149,7 @@ export default function TaskListPage() {
                     : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {loading ? "…" : (count ?? 0)}
+                {loading ? "…" : count}
               </span>
             </button>
           );
@@ -119,11 +163,43 @@ export default function TaskListPage() {
             {error}
           </div>
           <button
-            onClick={() => load(filter)}
+            onClick={() => load(filter, page)}
             className="font-medium underline underline-offset-2 hover:text-red-800"
           >
             Retry
           </button>
+        </div>
+      )}
+
+      {!loading && total > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-500 tabular-nums">
+            Showing{" "}
+            <span className="font-semibold text-slate-700">{start}</span>–
+            <span className="font-semibold text-slate-700">{end}</span> of{" "}
+            <span className="font-semibold text-slate-700">{total}</span> tasks
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1 || loading}
+              aria-label="Previous page"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--app-border)] bg-white text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-3 text-sm font-medium text-slate-600 tabular-nums">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages || loading}
+              aria-label="Next page"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--app-border)] bg-white text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 

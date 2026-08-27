@@ -40,8 +40,8 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getTasks();
-      setTasks(data);
+      const data = await api.getTasks({ limit: 1000 });
+      setTasks(data.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {

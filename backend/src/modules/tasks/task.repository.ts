@@ -10,13 +10,27 @@ function mapRow(row: any): Task | undefined {
 }
 
 export const taskRepository = {
-  findAll(status?: TaskStatus): Task[] {
+  findAll(options: {
+    status?: TaskStatus;
+    limit: number;
+    offset: number;
+  }): { rows: Task[]; total: number } {
+    const { status, limit, offset } = options;
+
+    const totalRow = status
+      ? (db.prepare('SELECT COUNT(*) AS count FROM tasks WHERE status = ?').get(status) as { count: number })
+      : (db.prepare('SELECT COUNT(*) AS count FROM tasks').get() as { count: number });
+    const total = totalRow.count;
+
     const rows = status
       ? db
-          .prepare('SELECT * FROM tasks WHERE status = ? ORDER BY createdAt DESC')
-          .all(status)
-      : db.prepare('SELECT * FROM tasks ORDER BY createdAt DESC').all();
-    return rows.map((row: any) => mapRow(row)!);
+          .prepare('SELECT * FROM tasks WHERE status = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?')
+          .all(status, limit, offset)
+      : db
+          .prepare('SELECT * FROM tasks ORDER BY createdAt DESC LIMIT ? OFFSET ?')
+          .all(limit, offset);
+
+    return { rows: rows.map((row: any) => mapRow(row)!), total };
   },
 
   findById(id: string): Task | undefined {

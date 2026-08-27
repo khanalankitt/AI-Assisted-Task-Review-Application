@@ -1,6 +1,13 @@
-import { AIAnalysisResult, Task, TaskStatus } from "./types";
+import {
+  AIAnalysisResult,
+  PaginatedResult,
+  Task,
+  TaskStatus,
+} from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+const PAGE_SIZE = 10;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -19,10 +26,21 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export interface GetTasksParams {
+  status?: TaskStatus | "ALL";
+  page?: number;
+  limit?: number;
+}
+
 export const api = {
-  getTasks(status?: TaskStatus | "ALL") {
-    const query = status && status !== "ALL" ? `?status=${status}` : "";
-    return request<Task[]>(`/tasks${query}`);
+  getTasks(params: GetTasksParams = {}) {
+    const { status, page, limit } = params;
+    const query = new URLSearchParams();
+    if (status && status !== "ALL") query.set("status", status);
+    if (page && page > 1) query.set("page", String(page));
+    if (limit && limit !== PAGE_SIZE) query.set("limit", String(limit));
+    const qs = query.toString();
+    return request<PaginatedResult<Task>>(`/tasks${qs ? `?${qs}` : ""}`);
   },
   getTask(id: string) {
     return request<Task>(`/tasks/${id}`);
