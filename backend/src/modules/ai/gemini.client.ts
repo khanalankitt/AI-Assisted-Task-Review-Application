@@ -1,40 +1,58 @@
-import axios from "axios";
+import { GoogleGenAI } from "@google/genai";
 import { config } from "../../config/env";
 import { ApiError } from "../../utils/ApiError";
-
-const geminiUrl = (model: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
 export async function callGemini(prompt: string): Promise<string> {
   if (!config.geminiApiKey) {
     throw new ApiError(500, "GEMINI_API_KEY is not configured on the server");
   }
 
-  let response;
+  const ai = new GoogleGenAI({
+    apiKey: config.geminiApiKey,
+  });
+
   try {
-    response = await axios.post(
-      geminiUrl(config.geminiModel),
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
+    const response = await ai.models.generateContent({
+      model: config.geminiModel,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            category: {
+              type: "string",
+            },
+            priority: {
+              type: "string",
+              enum: ["LOW", "MEDIUM", "HIGH"],
+            },
+            summary: {
+              type: "string",
+            },
+            recommendedAction: {
+              type: "string",
+            },
+          },
+          required: ["category", "priority", "summary", "recommendedAction"],
         },
       },
-      {
-        params: { key: config.geminiApiKey },
-        timeout: 15000,
-      },
-    );
+    });
+
+    const text = response.text;
+
+    if (!text) {
+      throw new ApiError(502, "AI service returned an empty response");
+    }
+
+    return text;
   } catch (err) {
-    throw new ApiError(502, "Failed to reach the AI service");
+    if (err instanceof ApiError) {
+      throw err;
+    }
+
+    console.error("Gemini error:", err);
+
+    throw new ApiError(502, "Failed to generate AI analysis");
   }
-
-  const text: string | undefined =
-    response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new ApiError(502, "AI service returned an empty response");
-  }
-
-  return text;
 }

@@ -5,8 +5,9 @@ import { ApiError } from "../../utils/ApiError";
 
 function buildPrompt(task: Task): string {
   return `You are an assistant helping an operations team triage incoming tasks.
-Given the task details below, respond with ONLY a JSON object (no markdown fences, no extra text) with exactly these fields:
-- category: a short UPPER_SNAKE_CASE label describing the type of task (e.g. DOCUMENT_REQUEST, TECHNICAL_ISSUE, BILLING_QUERY)
+
+Given the task details below, generate an analysis with:
+- category: a short UPPER_SNAKE_CASE label describing the type of task
 - priority: one of LOW, MEDIUM, HIGH
 - summary: one short sentence summarising the task
 - recommendedAction: one short sentence describing the next action the operations user should take
@@ -15,13 +16,18 @@ Title: ${task.title}
 Description: ${task.description}`;
 }
 
-function isValidResult(value: any): value is AIAnalysisResult {
+function isValidResult(value: unknown): value is AIAnalysisResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const result = value as Record<string, unknown>;
+
   return (
-    !!value &&
-    typeof value.category === "string" &&
-    ["LOW", "MEDIUM", "HIGH"].includes(value.priority) &&
-    typeof value.summary === "string" &&
-    typeof value.recommendedAction === "string"
+    typeof result.category === "string" &&
+    ["LOW", "MEDIUM", "HIGH"].includes(result.priority as string) &&
+    typeof result.summary === "string" &&
+    typeof result.recommendedAction === "string"
   );
 }
 
@@ -30,6 +36,7 @@ export const aiService = {
     const prompt = buildPrompt(task);
 
     let rawText: string;
+
     try {
       rawText = await callGemini(prompt);
     } catch (err) {
@@ -39,13 +46,9 @@ export const aiService = {
     }
 
     let parsed: unknown;
+
     try {
-      const cleaned = rawText
-        .trim()
-        .replace(/^```json/i, "")
-        .replace(/```$/, "")
-        .trim();
-      parsed = JSON.parse(cleaned);
+      parsed = JSON.parse(rawText);
     } catch {
       throw new ApiError(502, "AI service returned an unreadable response");
     }
