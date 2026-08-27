@@ -75,9 +75,24 @@ This keeps HTTP handling, business logic, and database access separated.
 ### Requirements
 
 * Node.js 18+
-* Gemini API key
+* Google Gemini API key
 
-Get a Gemini API key from Google AI Studio.
+### Gemini API Key Setup
+
+1. Open **Google AI Studio**.
+2. Create a new Google AI Studio project if you don't already have one.
+3. Go to **API Keys**.
+4. Select **Create API key** / **Create API key in new project**.
+5. Copy the generated API key.
+6. Add it to the backend `.env` file:
+
+```env
+GEMINI_API_KEY=your_api_key
+```
+
+The application uses the **real Gemini API**, not a mocked AI response.
+
+> **Note:** Because this assessment uses a real Gemini API and a lightweight Flash model, AI analysis may take a few seconds depending on API/network latency. This is acceptable for the assessment. In a production environment, a faster or more optimized model can be selected based on the application's latency and cost requirements.
 
 ### Backend
 
@@ -87,13 +102,7 @@ npm install
 cp .env.example .env
 ```
 
-Add your key to `.env`:
-
-```env
-GEMINI_API_KEY=your_api_key
-```
-
-Start the server:
+Add your Gemini API key to `.env`, then start the server:
 
 ```bash
 npm run dev
@@ -105,7 +114,7 @@ Backend runs on:
 http://localhost:4000
 ```
 
-The database is created automatically and sample tasks are seeded on the first run.
+The SQLite database is created automatically and sample tasks are seeded on the first run.
 
 ### Frontend
 
